@@ -10,6 +10,7 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useFindAndModify: false,
+    useCreateIndex: true,
   })
   .then((result) => {
     console.log("Conected to MongoDB");
@@ -19,11 +20,9 @@ mongoose
   });
 
 const personSchema = new mongoose.Schema({
-  name: { type: String, minlength: 2, required: true },
-  number: { type: String, minlength: 2, required: true },
+  name: { type: String, minlength: 3, required: true, unique: true },
+  number: { type: String, minlength: 8, required: true },
 });
-
-personSchema.plugin(uniqueValidator);
 
 personSchema.set("toJSON", {
   transform: (document, returnedObject) => {
@@ -32,5 +31,5 @@ personSchema.set("toJSON", {
     delete returnedObject.__v;
   },
 });
-
+personSchema.plugin(uniqueValidator);
 module.exports = mongoose.model("Person", personSchema);
