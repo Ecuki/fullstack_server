@@ -10,6 +10,7 @@ const infoRouter = require("./controllers/info");
 const loginRouter = require("./controllers/login");
 const personsRouter = require("./controllers/persons");
 const usersRouter = require("./controllers/users");
+
 const middleware = require("./utils/middleware");
 const morgan = require("morgan");
 
@@ -39,6 +40,11 @@ app.use("/api/blogs", blogsRouter);
 app.use("/api/persons", personsRouter);
 app.use("/api/users", usersRouter);
 app.use("/info", infoRouter);
+
+if (process.env.NODE_ENV === "test") {
+  const testingRouter = require("./controllers/testing");
+  app.use('/api/testing', testingRouter)
+}
 
 app.use(middleware.errorHandler);
 app.use(middleware.unknowEndpoint);

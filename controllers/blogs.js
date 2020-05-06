@@ -69,7 +69,7 @@ blogsRouter.delete("/:id", async (req, res) => {
     id: 1,
   });
 
-  if (blog.user.username.toString() === decodedToken.username.toString()) {
+  if (!blog || blog.user._id.toString() === decodedToken.id.toString()) {
     await Blog.findByIdAndDelete(req.params.id);
     res.status(204).end();
   } else {
@@ -78,6 +78,10 @@ blogsRouter.delete("/:id", async (req, res) => {
 });
 
 blogsRouter.put("/:id", async (req, res) => {
+  const decodedToken = jwt.verify(req.token, process.env.SECRET);
+  if (!req.token || !decodedToken.id) {
+    return res.status(401).json({ error: "token missing or invalid" });
+  }
   if (!isObjectIdValid(req.params.id)) {
     return res.status(400).end();
   }
@@ -96,14 +100,22 @@ blogsRouter.put("/:id", async (req, res) => {
   if (body.likes) {
     blogToUpdate.likes = body.likes;
   }
+  if (body.user) {
+    blogToUpdate.user = body.user;
+  }
 
   const blog = await Blog.findByIdAndUpdate(req.params.id, blogToUpdate, {
     new: true,
     runValidator: true,
     context: "query",
   });
+
   if (blog) {
-    return res.json(blog.toJSON());
+    if (blog.user.toString() === decodedToken.id.toString()) {
+      return res.json(blog.toJSON());
+    } else {
+      res.status(401).json({ error: "unauthorized" });
+    }
   } else return res.status(404).end();
 });
 
