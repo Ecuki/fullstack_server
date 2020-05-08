@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "server": "json-server -p3001 --watch db.json",
     "start": "cross-env NODE_ENV=production node index.js",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "build:ui": "rmdir build /s /q && cd ../client && npm run build && xcopy build ..\\server\\build /s /e /y /i",
