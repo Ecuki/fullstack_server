@@ -2,6 +2,7 @@ const blogsRouter = require("express").Router();
 const jwt = require("jsonwebtoken");
 const Blog = require("../models/blog");
 const User = require("../models/user");
+const Comment = require("../models/comment");
 const { isObjectIdValid } = require("../utils/helper");
 
 // const getTokenFrom = (req) => {};
@@ -11,6 +12,12 @@ blogsRouter.get("/", async (req, res) => {
     username: 1,
     name: 1,
     id: 1,
+  }).populate("comments", {
+    content: 1,
+    createdAt: 1,
+    id: 1,
+  }).populate("comments.user", {
+    username: 1,
   });
   res.json(blogs.map((blog) => blog.toJSON()));
 });
@@ -23,6 +30,10 @@ blogsRouter.get("/:id", async (req, res) => {
     username: 1,
     name: 1,
     id: 1,
+  }).populate({
+    path: "comments", populate: {
+      path: "user"
+    }
   });
 
   if (blog) {
@@ -77,6 +88,7 @@ blogsRouter.delete("/:id", async (req, res) => {
   }
 });
 
+
 blogsRouter.put("/:id", async (req, res) => {
   const decodedToken = jwt.verify(req.token, process.env.SECRET);
   if (!req.token || !decodedToken.id) {
@@ -108,15 +120,57 @@ blogsRouter.put("/:id", async (req, res) => {
     new: true,
     runValidator: true,
     context: "query",
+  }).populate("user", {
+    username: 1,
+    name: 1,
+    id: 1,
+  }).populate("comments", {
+    content: 1,
+    createdAt: 1,
+    id: 1,
+  }).populate("comments.user", {
+    username: 1,
   });
 
+  const user = await User.findById(decodedToken.id.toString())
   if (blog) {
-    if (blog.user.toString() === decodedToken.id.toString()) {
-      return res.json(blog.toJSON());
+    if (user) {
+      console.log(blog.toJSON());
+      return res.status(200).json(blog.toJSON());
     } else {
       res.status(401).json({ error: "unauthorized" });
     }
   } else return res.status(404).end();
+});
+
+blogsRouter.post("/:id/comments", async (req, res) => {
+  const body = req.body;
+
+  const decodedToken = jwt.verify(req.token, process.env.SECRET);
+  if (!req.token || !decodedToken.id) {
+    return res.status(401).json({ error: "token missing or invalid" });
+  }
+
+  const user = await User.findById(decodedToken.id);
+  const blog = await Blog.findById(req.params.id);
+
+  const comment = new Comment({
+    content: body.content,
+    createdAt: new Date(),
+    user: user._id,
+    blog: blog._id,
+  });
+
+  const savedComment = await comment.save()
+  await savedComment.populate("user", {
+    name: 1,
+    id: 1,
+  })
+  user.comments = user.comments.concat(savedComment._id);
+  blog.comments = blog.comments.concat(savedComment._id);
+  await user.save();
+  await blog.save();
+  res.json(savedComment.toJSON());
 });
 
 module.exports = blogsRouter;
